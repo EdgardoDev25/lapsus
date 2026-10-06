@@ -16,7 +16,7 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 | Qué | Estado | Nota |
 |---|---|---|
 | App nativa SwiftUI (iOS 17+), XcodeGen | 🧪 | Misma cadena que SoundFast. El documento de planificación decía Flutter; se cambió a SwiftUI porque es lo que ya funciona sin Mac. |
-| Compilación en GitHub Actions | ⏳ | Falta crear el repositorio en GitHub. |
+| Compilación en GitHub Actions | ✅ | Repo público EdgardoDev25/lapsus. Primera compilación (build 1, 0.2.0) sin errores con Xcode 26.6. |
 | Ícono (blob con degradado Aurora) | 🧪 | Generado; se puede rediseñar. |
 | Tipografía Mulish del diseño | ⏳ | Por ahora usa la del sistema (SF Pro). |
 
