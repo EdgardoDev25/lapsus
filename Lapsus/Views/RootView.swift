@@ -38,6 +38,12 @@ private struct ThemedRoot: View {
         .tint(pal.primary)
         .environment(\.palette, pal)
         .onChange(of: tab) { _, _ in Haptics.tick() }
+        .fullScreenCover(isPresented: Binding(get: { !prefs.s.onboarded }, set: { _ in })) {
+            OnboardingView()
+                .environmentObject(prefs)
+                .environmentObject(store)
+                .environment(\.palette, pal)
+        }
         // Cruce de medianoche con la app abierta.
         .onReceive(minuteTimer) { _ in store.rollover() }
     }

@@ -88,16 +88,21 @@ struct WorkDay: Codable, Identifiable, Equatable {
     var sessions: [FocusSession] = []
     var pauses: [PauseEvent] = []
     var tasks: [TaskEntry] = []
+    /// Meta del día en minutos. Copia del horario vigente cuando se creó el día:
+    /// cambiar el horario después no altera los días anteriores.
     var goalMinutes: Int
+    /// Horario de ese día tal como estaba configurado (nil en días de versiones viejas).
+    var plan: DayPlan?
     var finishedAt: Date?
     var overtimeFinishedAt: Date?
     /// "¿Trabajaste hoy?" → No. El día queda guardado pero fuera de las estadísticas.
     var didWork = true
 
-    init(date: Date, goalMinutes: Int) {
+    init(date: Date, plan: DayPlan) {
         self.id = Fmt.dayID(date)
         self.date = Fmt.cal.startOfDay(for: date)
-        self.goalMinutes = goalMinutes
+        self.plan = plan
+        self.goalMinutes = plan.minutes
     }
 
     /// Tolerante con versiones anteriores: si falta una clave, usa el valor por defecto.
@@ -110,6 +115,7 @@ struct WorkDay: Codable, Identifiable, Equatable {
         pauses = try c.decodeIfPresent([PauseEvent].self, forKey: .pauses) ?? []
         tasks = try c.decodeIfPresent([TaskEntry].self, forKey: .tasks) ?? []
         goalMinutes = try c.decodeIfPresent(Int.self, forKey: .goalMinutes) ?? 480
+        plan = try? c.decodeIfPresent(DayPlan.self, forKey: .plan)
         finishedAt = try c.decodeIfPresent(Date.self, forKey: .finishedAt)
         overtimeFinishedAt = try c.decodeIfPresent(Date.self, forKey: .overtimeFinishedAt)
         didWork = try c.decodeIfPresent(Bool.self, forKey: .didWork) ?? true
@@ -168,9 +174,12 @@ struct WorkDay: Codable, Identifiable, Equatable {
     /// Cuenta para estadísticas: trabajó y hay datos.
     var counts: Bool { didWork && hasData }
 
+    /// Día laboral según el horario que tenía (los días libres no tienen meta).
+    var hasGoal: Bool { goalMinutes > 0 }
+
     /// Se cumplió la meta diaria (solo jornada normal).
     var metGoal: Bool {
-        counts && focused(.normal) >= Double(goalMinutes) * 60
+        counts && hasGoal && focused(.normal) >= Double(goalMinutes) * 60
     }
 }
 

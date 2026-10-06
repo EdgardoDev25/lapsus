@@ -46,6 +46,7 @@ struct TimerView: View {
                 store.resume(categories: cats, note: note)
             }
             .environment(\.palette, pal)
+            .environmentObject(prefs)
         }
         .sheet(item: $finishing) { req in
             FinishSheet(request: req)
@@ -216,7 +217,10 @@ struct TimerView: View {
         let pauses = day.pauseCount(.normal)
         switch phase {
         case .idle:
-            return "Meta del día: \(Fmt.hm(Double(prefs.s.goalMinutes) * 60))"
+            guard let plan = day.plan, plan.enabled, plan.minutes > 0 else {
+                return "Hoy no tienes horario de trabajo"
+            }
+            return "Horario \(Fmt.clockTime(plan.start, prefs.s.use24h))–\(Fmt.clockTime(plan.end, prefs.s.use24h)) · meta \(Fmt.hm(Double(plan.minutes) * 60))"
         case .running, .paused:
             return "Hoy \(Fmt.hm(focused)) enfocado · \(pauses) \(pauses == 1 ? "pausa" : "pausas")"
         case .finished:

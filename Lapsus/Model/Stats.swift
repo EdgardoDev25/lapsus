@@ -11,6 +11,8 @@ struct DayStat: Identifiable {
     var ratio: Double?
     var longest: TimeInterval
     var counts: Bool
+    /// Meta de ese día según el horario que tenía entonces (0 = día libre).
+    var goal: TimeInterval
 
     var distractionShare: Double {
         let total = focused + paused
@@ -39,6 +41,16 @@ struct WeekStats {
         focused + paused > 0 ? focused / (focused + paused) : nil
     }
     var hasData: Bool { !worked.isEmpty }
+
+    /// Suma de las metas de los días trabajados que eran laborables.
+    var goal: TimeInterval { worked.filter { $0.goal > 0 }.reduce(0) { $0 + $1.goal } }
+    /// Qué tanto de esa meta se cumplió (los días libres no cuentan).
+    var goalShare: Double? {
+        let g = goal
+        guard g > 0 else { return nil }
+        let f = worked.filter { $0.goal > 0 }.reduce(0) { $0 + $1.focused }
+        return f / g
+    }
 
     var best: DayStat? {
         worked.count >= 2 ? worked.max(by: { $0.focused < $1.focused }) : nil
@@ -73,7 +85,8 @@ enum Stats {
                        distraction: distraction,
                        ratio: d.focusRatio(.normal, now: now),
                        longest: d.longestBlock(now: now),
-                       counts: d.counts)
+                       counts: d.counts,
+                       goal: Double(d.goalMinutes) * 60)
     }
 
     static func week(_ start: Date, days: [WorkDay], now: Date = Date()) -> WeekStats {
@@ -98,7 +111,7 @@ enum Stats {
                 }
             } else {
                 stats.append(DayStat(id: id, date: date, focused: 0, paused: 0, overtime: 0, distraction: 0,
-                                     ratio: nil, longest: 0, counts: false))
+                                     ratio: nil, longest: 0, counts: false, goal: 0))
             }
         }
 
@@ -115,12 +128,12 @@ enum Stats {
         return w
     }
 
-    /// Días trabajados seguidos cumpliendo la meta. Los días sin registro
-    /// (fines de semana, descansos) no rompen la racha. Hoy solo suma si ya se cumplió.
+    /// Días trabajados seguidos cumpliendo la meta. Los días sin registro y los
+    /// días libres según el horario no rompen la racha. Hoy solo suma si ya se cumplió.
     static func streak(_ days: [WorkDay]) -> Int {
         let todayID = Fmt.dayID(Date())
         var count = 0
-        for d in days.reversed() where d.counts {
+        for d in days.reversed() where d.counts && d.hasGoal {
             if d.metGoal {
                 count += 1
             } else if d.id == todayID {

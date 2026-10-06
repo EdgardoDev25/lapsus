@@ -109,9 +109,9 @@ struct StatsView: View {
 
     private func goalCard(_ w: WeekStats) -> some View {
         let ratio = w.ratio ?? 0
-        let goal = Double(prefs.s.goalMinutes) * 60
-        let avg = w.focused / Double(max(1, w.worked.count))
-        let met = goal > 0 ? avg / goal : 0
+        // Metas guardadas en cada día: un cambio de horario no altera semanas anteriores.
+        let goal = w.goal
+        let met = w.goalShare
         return HStack(spacing: 14) {
             ZStack {
                 Ring(value: ratio, lineWidth: 9)
@@ -126,10 +126,10 @@ struct StatsView: View {
             }
             .frame(width: 70, height: 70)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Meta diaria")
+                Text("Meta según tu horario")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(pal.sub)
-                Text("\(Fmt.hm(goal)) · \(Fmt.percent(met)) cumplida")
+                Text(met.map { "\(Fmt.hm(goal)) · \(Fmt.percent($0)) cumplida" } ?? "Sin días laborables")
                     .font(.system(size: 13.5, weight: .bold))
                     .foregroundStyle(pal.text)
                     .fixedSize(horizontal: false, vertical: true)

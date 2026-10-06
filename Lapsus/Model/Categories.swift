@@ -1,15 +1,28 @@
 import SwiftUI
 
-/// Peso estadístico de una categoría. El usuario no lo ve; lo usan las estadísticas
-/// para separar descansos sanos de fugas de tiempo.
-enum PauseWeight: String {
-    case neutral, positive, distraction, mildDistraction, quasiProductive, unclassified
+/// Peso estadístico de una categoría. Lo usan las estadísticas para separar
+/// descansos sanos de fugas de tiempo.
+enum PauseWeight: String, Codable, CaseIterable, Identifiable {
+    case positive, neutral, quasiProductive, mildDistraction, distraction, unclassified
+
+    var id: String { rawValue }
 
     /// Cuenta como "distracción" en los insights.
     var isDistraction: Bool { self == .distraction || self == .mildDistraction }
+
+    var name: String {
+        switch self {
+        case .positive: return "Descanso sano"
+        case .neutral: return "Neutral"
+        case .quasiProductive: return "Relacionado al trabajo"
+        case .mildDistraction: return "Distracción leve"
+        case .distraction: return "Distracción"
+        case .unclassified: return "Sin clasificar"
+        }
+    }
 }
 
-enum PauseGroup: String, CaseIterable, Identifiable {
+enum PauseGroup: String, Codable, CaseIterable, Identifiable {
     case personal, healthy, social, errands, leisure, cognitive, other
 
     var id: String { rawValue }
@@ -37,19 +50,59 @@ enum PauseGroup: String, CaseIterable, Identifiable {
         case .other: return Color(hex: 0x9A97B4)
         }
     }
+
+    /// Tipo sugerido al crear una categoría en este grupo.
+    var defaultWeight: PauseWeight {
+        switch self {
+        case .healthy: return .positive
+        case .leisure: return .distraction
+        case .cognitive: return .quasiProductive
+        case .other: return .unclassified
+        default: return .neutral
+        }
+    }
 }
 
-struct PauseCategory: Identifiable, Hashable {
-    let id: String
+struct PauseCategory: Identifiable, Hashable, Codable {
+    var id: String
     /// Texto del chip.
-    let name: String
+    var name: String
     /// Texto corto para el historial ("Pausa 12 min · Merienda").
-    let short: String
-    let group: PauseGroup
-    let weight: PauseWeight
-    let icon: String
+    var short: String
+    var group: PauseGroup
+    var weight: PauseWeight
+    var icon: String
+    /// Oculta del modal. No se borra para no perder el nombre en el historial.
+    var archived = false
+    /// Creada por la persona (no viene con la app).
+    var custom = false
 
-    static let all: [PauseCategory] = [
+    init(id: String, name: String, short: String, group: PauseGroup, weight: PauseWeight, icon: String,
+         archived: Bool = false, custom: Bool = false) {
+        self.id = id
+        self.name = name
+        self.short = short
+        self.group = group
+        self.weight = weight
+        self.icon = icon
+        self.archived = archived
+        self.custom = custom
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? id
+        short = try c.decodeIfPresent(String.self, forKey: .short) ?? name
+        group = (try? c.decodeIfPresent(PauseGroup.self, forKey: .group)) ?? .other
+        weight = (try? c.decodeIfPresent(PauseWeight.self, forKey: .weight)) ?? group.defaultWeight
+        icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "circle.fill"
+        archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        custom = try c.decodeIfPresent(Bool.self, forKey: .custom) ?? false
+    }
+
+    /// Las que trae la app. Se pueden editar u ocultar desde Ajustes.
+    static let builtIn: [PauseCategory] = [
         // Necesidad personal
         .init(id: "bano", name: "Baño", short: "Baño", group: .personal, weight: .neutral, icon: "drop.fill"),
         .init(id: "comer", name: "Merendando / comiendo", short: "Merienda", group: .personal, weight: .neutral, icon: "fork.knife"),
@@ -83,9 +136,55 @@ struct PauseCategory: Identifiable, Hashable {
         .init(id: "otro", name: "Otro (detállalo en la nota)", short: "Otro", group: .other, weight: .unclassified, icon: "ellipsis.circle.fill"),
     ]
 
-    static let byID: [String: PauseCategory] = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+    /// Íconos para elegir al crear o editar una categoría.
+    static let iconChoices: [String] = [
+        "drop.fill", "fork.knife", "cup.and.saucer.fill", "takeoutbag.and.cup.and.straw.fill", "pills.fill", "bed.double.fill",
+        "figure.walk", "figure.run", "dumbbell.fill", "moon.zzz.fill", "wind", "leaf.fill",
+        "sun.max.fill", "pause.circle.fill", "bubble.left.and.bubble.right.fill", "phone.fill", "message.fill", "person.2.fill",
+        "hand.raised.fill", "person.fill.questionmark", "figure.and.child.holdinghands", "pawprint.fill", "heart.fill", "house.fill",
+        "bag.fill", "cart.fill", "car.fill", "creditcard.fill", "folder.fill", "shippingbox.fill",
+        "iphone", "tv.fill", "gamecontroller.fill", "music.note", "headphones", "safari.fill",
+        "play.rectangle.fill", "book.fill", "newspaper.fill", "lightbulb.fill", "magnifyingglass", "envelope.fill",
+        "calendar", "doc.text.fill", "pencil", "hammer.fill", "wrench.and.screwdriver.fill", "graduationcap.fill",
+        "tornado", "flame.fill", "bolt.fill", "star.fill", "ellipsis.circle.fill", "questionmark.circle.fill",
+    ]
+
+    /// Texto sin tildes ni mayúsculas, para la búsqueda.
+    var searchText: String {
+        "\(name) \(short) \(group.name)".folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "es"))
+    }
+}
+
+/// Catálogo en uso (el de la app más lo que la persona creó o editó).
+/// Lo mantiene al día `Preferences`; aquí queda a mano para modelos y estadísticas.
+enum Catalog {
+    private(set) static var items: [PauseCategory] = PauseCategory.builtIn
+    private(set) static var index: [String: PauseCategory] = Dictionary(uniqueKeysWithValues: PauseCategory.builtIn.map { ($0.id, $0) })
+
+    static func set(_ list: [PauseCategory]) {
+        items = list
+        index = Dictionary(list.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// Agrega al final las categorías de la app que falten en una lista guardada
+    /// (por ejemplo, si una versión nueva trae categorías nuevas).
+    static func merged(_ saved: [PauseCategory]) -> [PauseCategory] {
+        var list = saved
+        let ids = Set(saved.map(\.id))
+        for c in PauseCategory.builtIn where !ids.contains(c.id) {
+            list.append(c)
+        }
+        return list
+    }
+}
+
+extension PauseCategory {
+    static var all: [PauseCategory] { Catalog.items }
+    static var byID: [String: PauseCategory] { Catalog.index }
+    /// Las que aparecen en el modal.
+    static var active: [PauseCategory] { Catalog.items.filter { !$0.archived } }
 
     static func inGroup(_ g: PauseGroup) -> [PauseCategory] {
-        all.filter { $0.group == g }
+        active.filter { $0.group == g }
     }
 }

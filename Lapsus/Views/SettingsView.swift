@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Environment(\.palette) private var pal
 
     @State private var confirmDelete = false
+    @State private var showSchedule = false
+    @State private var showCategories = false
 
     private let presets: [ThemePreset] = [.aurora, .medianoche, .atardecer, .bosque, .minimal]
 
@@ -13,6 +15,9 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ScreenTitle(title: "Ajustes")
+
+                SectionLabel("Trabajo").padding(.top, 22).padding(.bottom, 12)
+                workSection
 
                 SectionLabel("Tema de color").padding(.top, 22).padding(.bottom, 12)
                 themes
@@ -38,6 +43,18 @@ struct SettingsView: View {
         }
         .scrollIndicators(.hidden)
         .background(pal.bg.ignoresSafeArea())
+        .sheet(isPresented: $showSchedule) {
+            ScheduleSheet()
+                .environmentObject(prefs)
+                .environmentObject(store)
+                .environment(\.palette, pal)
+        }
+        .sheet(isPresented: $showCategories) {
+            CategoriesSheet()
+                .environmentObject(prefs)
+                .environmentObject(store)
+                .environment(\.palette, pal)
+        }
         .confirmationDialog("¿Borrar todos los datos?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Borrar todo", role: .destructive) { store.deleteAll() }
             Button("Cancelar", role: .cancel) {}
@@ -176,16 +193,64 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Trabajo
+
+    private var workSection: some View {
+        VStack(spacing: 0) {
+            navRow(icon: "calendar.badge.clock", title: "Horario de trabajo",
+                   detail: prefs.s.schedule.summary(use24h: prefs.s.use24h)) {
+                showSchedule = true
+            }
+            divider
+            navRow(icon: "square.grid.2x2.fill", title: "Categorías de pausa",
+                   detail: "\(PauseCategory.active.count) activas · \(prefs.s.pinned.count) fijadas") {
+                showCategories = true
+            }
+            divider
+            toggleRow("Avisarme al inicio de mi horario", isOn: binding(\.remindStart))
+            divider
+            toggleRow("Avisarme al final de mi horario", isOn: binding(\.remindEnd))
+        }
+        .background(pal.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(pal.border, lineWidth: 1))
+    }
+
+    private func navRow(icon: String, title: String, detail: String, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            Haptics.tap()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(pal.primary)
+                    .frame(width: 32, height: 32)
+                    .background(pal.primarySoft, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(pal.text)
+                    Text(detail)
+                        .font(.system(size: 12, weight: .medium).monospacedDigit())
+                        .foregroundStyle(pal.sub)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(pal.faint)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: Preferencias
 
     private var preferences: some View {
         VStack(spacing: 0) {
-            stepperRow("Meta diaria", value: Fmt.hm(Double(prefs.s.goalMinutes) * 60),
-                       minus: prefs.s.goalMinutes > 60, plus: prefs.s.goalMinutes < 720) { delta in
-                prefs.s.goalMinutes = min(720, max(60, prefs.s.goalMinutes + delta * 30))
-                store.updateGoal(prefs.s.goalMinutes)
-            }
-            divider
             toggleRow("Formato 24 horas", isOn: binding(\.use24h))
             divider
             toggleRow("Vibración", isOn: binding(\.haptics))
@@ -300,6 +365,10 @@ struct SettingsView: View {
             Text("Lapsus \(version) (\(build))")
                 .font(.system(size: 12.5, weight: .bold))
                 .foregroundStyle(pal.sub)
+            Button("Ver la introducción de nuevo") { prefs.s.onboarded = false }
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(pal.primary)
+                .padding(.bottom, 4)
             Text("Desarrollado y diseñado por Edgardo Rocha")
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(pal.muted)

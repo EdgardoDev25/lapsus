@@ -1,7 +1,7 @@
 # Lapsus — Estado del proyecto
 
 Qué quedó integrado en la app, qué no y qué se descartó.
-Última versión: **0.1.0** · 2026-10-05 · iPhone 16 Pro Max.
+Última versión: **0.2.0** · 2026-10-05 · iPhone 16 Pro Max.
 
 **Leyenda**
 - ✅ Integrado y confirmado por Edgar en el iPhone
@@ -28,6 +28,8 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 | Tres estilos: blob orgánico, ondas, partículas | 🧪 | Cambian de color, energía y respiración según el estado, con transición suave. |
 | Cronómetro del bloque actual + total del día | 🧪 | En pausa muestra cuánto llevas pausado. |
 | Modal "¿Qué hacías?" obligatorio, multi-selección, nota opcional | 🧪 | 24 categorías en 7 grupos con color e ícono. |
+| Buscador en el modal (sin importar tildes) | 🧪 | 0.2.0. Enter con un solo resultado lo marca; si no existe, ofrece crearla ahí mismo. |
+| Pausas fijadas arriba del modal | 🧪 | 0.2.0. Mantener presionada una opción → Fijar arriba. También desde Ajustes. |
 | Historial de hoy (línea de tiempo) | 🧪 | |
 | Finalizar día: ¿Trabajaste hoy? → resumen → tareas | 🧪 | Si estabas en pausa, el día termina cuando empezó la pausa. |
 | Reabrir jornada cerrada por error | 🧪 | El rato desde el cierre queda como pausa y se clasifica. |
@@ -46,8 +48,8 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 
 | Qué | Estado | Nota |
 |---|---|---|
-| Focus ratio de la semana + meta cumplida | 🧪 | |
-| Racha de días cumpliendo la meta | 🧪 | Los días sin registro no rompen la racha. |
+| Focus ratio de la semana + meta cumplida | 🧪 | La meta usa el horario que tenía cada día. |
+| Racha de días cumpliendo la meta | 🧪 | Los días sin registro y los días libres según el horario no rompen la racha. |
 | Barras de horas por día con "mejor" y "flojo" (+ horas extra en dorado) | 🧪 | |
 | Insights automáticos por reglas | 🧪 | |
 | Dona "¿Qué te roba el tiempo?" por grupo | 🧪 | |
@@ -62,10 +64,14 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 
 | Qué | Estado | Nota |
 |---|---|---|
+| Horario de trabajo por día (entrada, salida, descanso; cada día distinto o libre) | 🧪 | 0.2.0. Reemplaza la "meta diaria" fija: la meta de cada día sale del horario. |
+| Cambiar el horario no altera días anteriores | 🧪 | 0.2.0. Cada día guarda una copia de su horario al crearse; el cambio aplica desde hoy. |
+| Categorías: crear, editar (nombre, grupo, tipo, ícono), ocultar, fijar | 🧪 | 0.2.0. Las usadas se ocultan en vez de borrarse para no perder el historial. |
+| Avisos al inicio y al final del horario | 🧪 | 0.2.0. Notificación semanal por día activo. |
 | Temas Aurora, Medianoche, Atardecer, Bosque, Minimal + color propio | 🧪 | |
 | Claro / oscuro / auto | 🧪 | |
 | Estilo de ilustración | 🧪 | Con vista previa animada. |
-| Meta diaria, formato 24 h, vibración | 🧪 | |
+| Formato 24 h, vibración | 🧪 | |
 | Recordatorio "¿Sigues en pausa?" | 🧪 | Notificación local, minutos configurables. |
 | Exportar CSV | 🧪 | |
 | Exportar PDF | ⏳ | |
@@ -75,7 +81,7 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 
 | Qué | Estado | Nota |
 |---|---|---|
-| Onboarding | ⏳ | El diseño lo referencia (`LapsusOnboarding`) pero no venía en el archivo exportado. |
+| Onboarding (4 pasos, el último con el horario opcional) | 🧪 | 0.2.0. Hecho a partir del estilo de la app: el diseño `LapsusOnboarding` no venía en el archivo exportado. Se puede volver a ver desde Ajustes. |
 | Diseño exacto del timer (`LapsusTimer`) | ⏳ | Tampoco venía; el timer se hizo a partir del documento y las pantallas de apoyo. |
 | Recordatorio de cierre de jornada y resumen diario | ⏳ | |
 | Live Activity / widget (reloj en pantalla bloqueada) | ⏳ | Necesita una extensión aparte. |
@@ -84,5 +90,8 @@ Qué quedó integrado en la app, qué no y qué se descartó.
 
 ## Historial de versiones
 
+- **0.2.0** (2026-10-05) — Horario por día (con copia por día para no alterar estadísticas pasadas),
+  onboarding con horario opcional, categorías editables, buscador y fijadas en "¿Qué hacías?",
+  avisos de inicio/fin de horario.
 - **0.1.0** (2026-10-05) — Primera versión: timer con máquina de estados, modal de pausas,
   cierre del día, horas extra, historial, estadísticas, ajustes y CSV.

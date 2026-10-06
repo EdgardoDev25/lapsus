@@ -160,7 +160,8 @@ struct HistoryView: View {
     /// Intensidad según horas enfocadas contra la meta del día.
     private func heatLevel(_ day: WorkDay?) -> Int {
         guard let day, day.counts else { return 0 }
-        let goal = max(1, Double(day.goalMinutes) * 60)
+        // Los días libres se comparan contra 8 h para que igual se vean en el mapa.
+        let goal = Double(day.hasGoal ? day.goalMinutes : 480) * 60
         let v = day.focused(nil) / goal
         switch v {
         case ..<0.25: return 1

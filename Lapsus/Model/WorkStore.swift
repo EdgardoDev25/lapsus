@@ -39,7 +39,7 @@ final class WorkStore: ObservableObject {
     // MARK: Día en curso
 
     var current: WorkDay {
-        days.first { $0.id == currentID } ?? WorkDay(date: Date(), goalMinutes: prefs.s.goalMinutes)
+        days.first { $0.id == currentID } ?? newDay()
     }
 
     var phase: DayPhase { current.phase }
@@ -69,7 +69,7 @@ final class WorkStore: ObservableObject {
             currentID = todayID
         }
         if !days.contains(where: { $0.id == todayID }) {
-            days.append(WorkDay(date: Date(), goalMinutes: prefs.s.goalMinutes))
+            days.append(newDay())
             days.sort { $0.id < $1.id }
         }
         save()
@@ -77,7 +77,7 @@ final class WorkStore: ObservableObject {
 
     private func mutateCurrent(_ change: (inout WorkDay) -> Void) {
         guard let i = days.firstIndex(where: { $0.id == currentID }) else {
-            var d = WorkDay(date: Date(), goalMinutes: prefs.s.goalMinutes)
+            var d = newDay()
             change(&d)
             days.append(d)
             days.sort { $0.id < $1.id }
@@ -96,7 +96,6 @@ final class WorkStore: ObservableObject {
         switch phase {
         case .idle:
             mutateCurrent { d in
-                d.goalMinutes = prefs.s.goalMinutes
                 d.sessions.append(FocusSession(kind: .normal, start: now))
                 d.phase = .running
             }
@@ -201,10 +200,26 @@ final class WorkStore: ObservableObject {
         askResume = true
     }
 
-    /// Cambio de meta en Ajustes: aplica también al día en curso si sigue abierto.
-    func updateGoal(_ minutes: Int) {
-        guard !phase.isClosed else { return }
-        mutateCurrent { $0.goalMinutes = minutes }
+    /// Alguna pausa registrada usa esta categoría.
+    func isCategoryUsed(_ id: String) -> Bool {
+        days.contains { d in d.pauses.contains { $0.categories.contains(id) } }
+    }
+
+    /// Día nuevo con una copia del horario vigente para hoy.
+    private func newDay(_ date: Date = Date()) -> WorkDay {
+        WorkDay(date: date, plan: prefs.s.schedule.plan(for: date))
+    }
+
+    /// Cambio de horario en Ajustes: aplica desde hoy (si el día sigue abierto).
+    /// Los días anteriores conservan el horario con el que se registraron.
+    func applySchedule() {
+        guard !phase.isClosed, !currentIsStale else { return }
+        let plan = prefs.s.schedule.plan(for: current.date)
+        guard current.plan != plan else { return }
+        mutateCurrent { d in
+            d.plan = plan
+            d.goalMinutes = plan.minutes
+        }
     }
 
     // MARK: Datos

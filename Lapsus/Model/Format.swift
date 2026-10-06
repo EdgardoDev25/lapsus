@@ -20,6 +20,17 @@ enum Fmt {
     static let weekdaysShort = ["", "Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
     /// Iniciales de lunes a domingo.
     static let weekInitials = ["L", "M", "X", "J", "V", "S", "D"]
+    /// Nombres de lunes a domingo (índice del horario).
+    static let weekdaysMonFirst = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
+    /// Minutos desde la medianoche → "08:00" o "8:00 am".
+    static func clockTime(_ minutes: Int, _ use24h: Bool) -> String {
+        let m = ((minutes % 1440) + 1440) % 1440
+        let h = m / 60, mm = m % 60
+        if use24h { return String(format: "%02d:%02d", h, mm) }
+        let h12 = h % 12 == 0 ? 12 : h % 12
+        return String(format: "%d:%02d %@", h12, mm, h < 12 ? "am" : "pm")
+    }
 
     static func dayID(_ date: Date) -> String {
         let c = cal.dateComponents([.year, .month, .day], from: date)
